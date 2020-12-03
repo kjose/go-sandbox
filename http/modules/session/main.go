@@ -7,35 +7,57 @@ import (
 	"github.com/google/uuid"
 )
 
+type SessionStorage struct {
+	CurrentSessionId string
+	Sessions         map[string]Session
+}
+
 type Session map[string]string
 
-var sessions map[string]Session
+var sessionStorage *SessionStorage
 
 var currentUuid string
 
+func init() {
+	sessionStorage = &SessionStorage{
+		"",
+		map[string]Session{},
+	}
+	fmt.Println("Init session storage", sessionStorage)
+}
+
 func Init(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sid")
+	var cuid string
 	if err != nil {
-		uuid := uuid.New().String()
+		cuid = uuid.New().String()
 		cookie = &http.Cookie{
 			Name:  "sid",
-			Value: uuid,
+			Value: cuid,
 			// Secure:   false,
 			HttpOnly: true,
 		}
 		http.SetCookie(w, cookie)
-		sessions[uuid] = Session{}
 
-		fmt.Println("Init session", cookie)
+		fmt.Println("Init current session id", cuid)
 	}
 
-	currentUuid = cookie.Value
+	sessionStorage.CurrentSessionId = cuid
 }
 
 func Set(name string, value string) {
-	sessions[currentUuid][name] = value
+	if _, ok := sessionStorage.Sessions[currentUuid]; !ok {
+		sessionStorage.Sessions[currentUuid] = Session{}
+	}
+
+	sessionStorage.Sessions[currentUuid][name] = value
+	fmt.Println("Update session storage", sessionStorage)
 }
 
-func Get(name string) Session {
-	return sessions[currentUuid]
+func Get(name string) string {
+	return sessionStorage.Sessions[currentUuid][name]
+}
+
+func GetSession() Session {
+	return sessionStorage.Sessions[currentUuid]
 }

@@ -14,19 +14,20 @@ import (
 
 	"sandbox/http/modules/session"
 
+	"custom2"                     // vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
 	"sandbox/http/modules/custom" // depuis le gopath
-	"custom2" // vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
 )
 
 func main() {
-	urls := map[string]func(w http.ResponseWriter, r *http.Request) {
-		"/" : infos,
-		"/cat" : cat,
-		"/me" : me,
-		"/infos" : infos,
-		"/upload" : upload,
-		"/redirect" : redirect,
-		"/expire" : expire,
+	urls := map[string]func(w http.ResponseWriter, r *http.Request){
+		"/":         infos,
+		"/cat":      cat,
+		"/me":       me,
+		"/infos":    infos,
+		"/upload":   upload,
+		"/redirect": redirect,
+		"/expire":   expire,
+		"/signin":   signin,
 	}
 
 	for url, f := range urls {
@@ -38,13 +39,14 @@ func main() {
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 
 	fmt.Println("Server started ...")
+
 	http.ListenAndServe(":8080", nil)
 }
 
 func wrapper(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Init session
-		session.Init(w, r)		
+		session.Init(w, r)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -92,6 +94,7 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		Form          map[string][]string
 		Header        map[string][]string
 		LastVisit     string
+		Session       session.Session
 	}{
 		r.Method,
 		r.URL,
@@ -100,6 +103,7 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		r.Form,
 		r.Header,
 		cookieValue,
+		session.GetSession(),
 	}
 
 	// Set cookie for a future visit
@@ -107,9 +111,6 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		Name:  cookieName,
 		Value: time.Now().String(),
 	})
-
-	// Set cookie session if not set
-	//init
 
 	tpl.ExecuteTemplate(w, "infos.gohtml", data)
 }
@@ -175,6 +176,17 @@ func expire(w http.ResponseWriter, r *http.Request) {
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func signin(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		session.Set("firstname", r.FormValue("firstname"))
+		session.Set("lastname", r.FormValue("lastname"))
+
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+
+	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
 }
 
 // func catImg(w http.ResponseWriter, r *http.Request) {

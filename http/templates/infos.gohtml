@@ -8,6 +8,12 @@
 
 <h1>Infos</h1>
 
+{{if len .Session}}
+<p>
+    Hello {{index .Session "firstname"}} {{index .Session "lastname"}}
+</p>
+{{end}}
+
 <b>Basics</b>
 <p>
     Method : {{.Method}}
