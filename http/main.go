@@ -11,22 +11,42 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"sandbox/http/modules/session"
+
+	"sandbox/http/modules/custom" // depuis le gopath
+	"custom2" // vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
 )
 
 func main() {
-	http.Handle("/", http.HandlerFunc(infos))
-	http.Handle("/cat", http.HandlerFunc(cat))
-	http.Handle("/me", http.HandlerFunc(me))
-	http.HandleFunc("/infos", infos)
-	http.HandleFunc("/upload", upload)
-	http.HandleFunc("/redirect", redirect)
-	http.HandleFunc("/expire", expire)
+	urls := map[string]func(w http.ResponseWriter, r *http.Request) {
+		"/" : infos,
+		"/cat" : cat,
+		"/me" : me,
+		"/infos" : infos,
+		"/upload" : upload,
+		"/redirect" : redirect,
+		"/expire" : expire,
+	}
+
+	for url, f := range urls {
+		http.Handle(url, wrapper(http.HandlerFunc(f)))
+	}
+
 	// http.HandleFunc("/cat.jpg", catImg)
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("assets"))))
 	http.Handle("/favicon.ico", http.NotFoundHandler())
 
 	fmt.Println("Server started ...")
 	http.ListenAndServe(":8080", nil)
+}
+
+func wrapper(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Init session
+		session.Init(w, r)		
+		next.ServeHTTP(w, r)
+	})
 }
 
 var tpl *template.Template
@@ -52,6 +72,8 @@ func me(w http.ResponseWriter, r *http.Request) {
 }
 
 func infos(w http.ResponseWriter, r *http.Request) {
+	custom.Hello()
+	custom2.Hello2()
 	r.ParseForm()
 
 	cookieName := "last-visit"
@@ -85,6 +107,10 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		Name:  cookieName,
 		Value: time.Now().String(),
 	})
+
+	// Set cookie session if not set
+	//init
+
 	tpl.ExecuteTemplate(w, "infos.gohtml", data)
 }
 
