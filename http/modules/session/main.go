@@ -26,9 +26,8 @@ func init() {
 
 func Init(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sid")
-	var cuid string
 	if err != nil {
-		cuid = uuid.New().String()
+		cuid := uuid.New().String()
 		cookie = &http.Cookie{
 			Name:  "sid",
 			Value: cuid,
@@ -40,7 +39,7 @@ func Init(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("Init current session id", cuid)
 	}
 
-	sessionStorage.CurrentSessionId = cuid
+	sessionStorage.CurrentSessionId = cookie.Value
 }
 
 func Set(name string, value string) {
