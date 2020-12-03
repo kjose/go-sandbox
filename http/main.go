@@ -1,41 +1,30 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
+	"sandbox/http/modules/controllers"
+	"sandbox/http/modules/db"
+	"sandbox/http/modules/globals"
 	"sandbox/http/modules/session"
-
-	"custom2"                     // vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
-	"sandbox/http/modules/custom" // depuis le gopath
+	// vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
+	// depuis le gopath
 )
-
-type User struct {
-	FirstName string
-	LastName  string
-	Email     string
-	Password  []byte
-}
-
-var dbUsers = make(map[string]User)
 
 func main() {
 	urls := map[string]func(w http.ResponseWriter, r *http.Request){
-		"/":         infos,
-		"/cat":      cat,
-		"/me":       me,
-		"/infos":    infos,
-		"/upload":   upload,
+		"/":         controllers.Infos,
+		"/cat":      controllers.Cat,
+		"/me":       controllers.Me,
+		"/infos":    controllers.Infos,
+		"/upload":   controllers.Upload,
 		"/redirect": redirect,
 		"/expire":   expire,
 		"/login":    login,
@@ -64,14 +53,12 @@ func wrapper(next http.Handler) http.Handler {
 	})
 }
 
-var tpl *template.Template
-
 func init() {
 	// tpl = template.Must(template.ParseGlob("templates/*.gohtml"))
-	tpl = template.New("")
+	globals.Tpl = template.New("")
 	filepath.Walk("templates", func(path string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(path, ".gohtml") {
-			tpl.ParseFiles(path)
+			globals.Tpl.ParseFiles(path)
 		}
 
 		return nil
@@ -79,111 +66,7 @@ func init() {
 
 	// init user database
 	bs, _ := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.MinCost)
-	dbUsers["test@abtasty.com"] = User{"Kévin", "José", "kevin.jose@abtasty.com", bs}
-}
-
-func cat(w http.ResponseWriter, r *http.Request) {
-	tpl.ExecuteTemplate(w, "cat.gohtml", nil)
-}
-
-func me(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Me, me and me only")
-}
-
-func infos(w http.ResponseWriter, r *http.Request) {
-	custom.Hello()
-	custom2.Hello2()
-	r.ParseForm()
-
-	cookieName := "last-visit"
-	var c *http.Cookie
-	var cookieValue string
-	c, _ = r.Cookie(cookieName)
-	if c != nil {
-		cookieValue = c.Value
-	}
-
-	data := struct {
-		Method        string
-		Url           *url.URL
-		Host          string
-		ContentLength int64
-		Form          map[string][]string
-		Header        map[string][]string
-		LastVisit     string
-		Session       session.Session
-		User          User
-	}{
-		r.Method,
-		r.URL,
-		r.Host,
-		r.ContentLength,
-		r.Form,
-		r.Header,
-		cookieValue,
-		session.GetSession(),
-		dbUsers[session.Get("email")],
-	}
-
-	// Set cookie for a future visit
-	http.SetCookie(w, &http.Cookie{
-		Name:  cookieName,
-		Value: time.Now().String(),
-	})
-
-	tpl.ExecuteTemplate(w, "infos.gohtml", data)
-}
-
-func upload(w http.ResponseWriter, r *http.Request) {
-
-	var data struct {
-		Link string
-		Body string
-	}
-
-	// display uploaded image
-	if r.Method == http.MethodPost {
-
-		// body
-		bs := make([]byte, r.ContentLength)
-		r.Body.Read(bs)
-		data.Body = string(bs)
-		r.Body = ioutil.NopCloser(bytes.NewBuffer(bs))
-
-		// open
-		f, h, err := r.FormFile("q")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer f.Close()
-
-		// fmt.Println("\nfile:", f, "\nheader:", h, "\nerr:", err)
-
-		// read
-		bs, err = ioutil.ReadAll(f)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// store on the server
-		dst, err := os.Create(filepath.Join("./assets", h.Filename))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer dst.Close()
-
-		_, err = dst.Write(bs)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		data.Link = "/resources/" + h.Filename
-	}
-
-	tpl.ExecuteTemplate(w, "upload.gohtml", data)
+	db.DbUsers["test@abtasty.com"] = db.User{"Kévin", "José", "kevin.jose@abtasty.com", bs}
 }
 
 func redirect(w http.ResponseWriter, r *http.Request) {
@@ -212,7 +95,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		dbUsers[r.FormValue("email")] = User{
+		db.DbUsers[r.FormValue("email")] = db.User{
 			r.FormValue("firstname"),
 			r.FormValue("lastname"),
 			r.FormValue("email"),
@@ -225,7 +108,7 @@ func signin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
+	globals.Tpl.ExecuteTemplate(w, "signin.gohtml", nil)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -237,7 +120,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 	var message string
 	if r.Method == http.MethodPost {
 		// test user
-		if u, ok := dbUsers[r.FormValue("email")]; ok {
+		if u, ok := db.DbUsers[r.FormValue("email")]; ok {
 			// test password
 			err := bcrypt.CompareHashAndPassword(u.Password, []byte(r.FormValue("password")))
 			if err == nil {
@@ -252,7 +135,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	tpl.ExecuteTemplate(w, "login.gohtml", message)
+	globals.Tpl.ExecuteTemplate(w, "login.gohtml", message)
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
