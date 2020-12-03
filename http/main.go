@@ -229,15 +229,27 @@ func signin(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
+	if isConnected() {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	var message string
 	if r.Method == http.MethodPost {
-		if _, ok := dbUsers[r.FormValue("email")]; ok {
-			session.Set("email", r.FormValue("email"))
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
+		// test user
+		if u, ok := dbUsers[r.FormValue("email")]; ok {
+			// test password
+			err := bcrypt.CompareHashAndPassword(u.Password, []byte(r.FormValue("password")))
+			if err == nil {
+				session.Set("email", r.FormValue("email"))
+				http.Redirect(w, r, "/", http.StatusSeeOther)
+				return
+			}
+			message = "Wrong password"
+		} else {
+			message = "User not exists"
 		}
 
-		message = "User not exists"
 	}
 
 	tpl.ExecuteTemplate(w, "login.gohtml", message)
