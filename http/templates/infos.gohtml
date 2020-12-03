@@ -8,11 +8,14 @@
 
 <h1>Infos</h1>
 
-{{if len .Session}}
+{{if .User.Email}}
 <h3>
-    Hello {{index .Session "firstname"}} {{index .Session "lastname"}}
+    Hello {{.User.FirstName}} {{.User.LastName}}<br/>
+    Password : {{.User.Password}}
 </h3>
 {{end}}
+
+<h3>Connected from session {{index .Session "sid"}}</h3>
 
 <b>Basics</b>
 <p>

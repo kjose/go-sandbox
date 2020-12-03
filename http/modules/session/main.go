@@ -28,23 +28,22 @@ func Init(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sid")
 	sessionStorage.CurrentSessionId = ""
 	if err != nil {
+		Create(w, r)
 		return
 	}
 
 	cval := cookie.Value
 	if _, ok := sessionStorage.Sessions[cval]; !ok {
+		Create(w, r)
 		return
 	}
 
 	sessionStorage.CurrentSessionId = cval
-	fmt.Println("Init session id", cookie.Value)
+	Set("sid", cval)
+	fmt.Println("Init existing session id", cval)
 }
 
 func Set(name string, value string) {
-	if _, ok := sessionStorage.Sessions[sessionStorage.CurrentSessionId]; !ok {
-		sessionStorage.Sessions[sessionStorage.CurrentSessionId] = Session{}
-	}
-
 	sessionStorage.Sessions[sessionStorage.CurrentSessionId][name] = value
 	fmt.Println("Update session storage", sessionStorage)
 }
@@ -57,8 +56,8 @@ func GetSession() Session {
 	return sessionStorage.Sessions[sessionStorage.CurrentSessionId]
 }
 
-func IsConnected() bool {
-	return sessionStorage.CurrentSessionId != ""
+func HasSession() bool {
+	return len(sessionStorage.Sessions[sessionStorage.CurrentSessionId]) > 0
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +72,7 @@ func Create(w http.ResponseWriter, r *http.Request) {
 
 	sessionStorage.Sessions[cuid] = Session{}
 	sessionStorage.CurrentSessionId = cuid
+	Set("sid", cuid)
 	fmt.Println("Create new session id", cuid)
 }
 

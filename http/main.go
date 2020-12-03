@@ -12,11 +12,22 @@ import (
 	"text/template"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"sandbox/http/modules/session"
 
 	"custom2"                     // vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
 	"sandbox/http/modules/custom" // depuis le gopath
 )
+
+type User struct {
+	FirstName string
+	LastName  string
+	Email     string
+	Password  []byte
+}
+
+var dbUsers = make(map[string]User)
 
 func main() {
 	urls := map[string]func(w http.ResponseWriter, r *http.Request){
@@ -27,8 +38,9 @@ func main() {
 		"/upload":   upload,
 		"/redirect": redirect,
 		"/expire":   expire,
+		"/login":    login,
 		"/signin":   signin,
-		"/signout":  signout,
+		"/logout":   logout,
 	}
 
 	for url, f := range urls {
@@ -64,6 +76,10 @@ func init() {
 
 		return nil
 	})
+
+	// init user database
+	bs, _ := bcrypt.GenerateFromPassword([]byte("test"), bcrypt.MinCost)
+	dbUsers["test@abtasty.com"] = User{"Kévin", "José", "kevin.jose@abtasty.com", bs}
 }
 
 func cat(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +112,7 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		Header        map[string][]string
 		LastVisit     string
 		Session       session.Session
+		User          User
 	}{
 		r.Method,
 		r.URL,
@@ -105,6 +122,7 @@ func infos(w http.ResponseWriter, r *http.Request) {
 		r.Header,
 		cookieValue,
 		session.GetSession(),
+		dbUsers[session.Get("email")],
 	}
 
 	// Set cookie for a future visit
@@ -136,6 +154,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		f, h, err := r.FormFile("q")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		defer f.Close()
 
@@ -145,6 +164,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		bs, err = ioutil.ReadAll(f)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		// store on the server
@@ -158,6 +178,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		_, err = dst.Write(bs)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		data.Link = "/resources/" + h.Filename
 	}
@@ -180,15 +201,25 @@ func expire(w http.ResponseWriter, r *http.Request) {
 }
 
 func signin(w http.ResponseWriter, r *http.Request) {
-	if session.IsConnected() {
+	if isConnected() {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
 	if r.Method == http.MethodPost {
-		session.Create(w, r)
-		session.Set("firstname", r.FormValue("firstname"))
-		session.Set("lastname", r.FormValue("lastname"))
+		bs, err := bcrypt.GenerateFromPassword([]byte(r.FormValue("password")), bcrypt.MinCost)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dbUsers[r.FormValue("email")] = User{
+			r.FormValue("firstname"),
+			r.FormValue("lastname"),
+			r.FormValue("email"),
+			bs,
+		}
+
+		session.Set("email", r.FormValue("email"))
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -197,9 +228,28 @@ func signin(w http.ResponseWriter, r *http.Request) {
 	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
 }
 
-func signout(w http.ResponseWriter, r *http.Request) {
+func login(w http.ResponseWriter, r *http.Request) {
+	var message string
+	if r.Method == http.MethodPost {
+		if _, ok := dbUsers[r.FormValue("email")]; ok {
+			session.Set("email", r.FormValue("email"))
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		message = "User not exists"
+	}
+
+	tpl.ExecuteTemplate(w, "login.gohtml", message)
+}
+
+func logout(w http.ResponseWriter, r *http.Request) {
 	session.Close(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func isConnected() bool {
+	return session.Get("email") != ""
 }
 
 // func catImg(w http.ResponseWriter, r *http.Request) {
