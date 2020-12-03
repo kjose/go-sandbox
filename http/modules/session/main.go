@@ -16,8 +16,6 @@ type Session map[string]string
 
 var sessionStorage *SessionStorage
 
-var currentUuid string
-
 func init() {
 	sessionStorage = &SessionStorage{
 		"",
@@ -46,18 +44,18 @@ func Init(w http.ResponseWriter, r *http.Request) {
 }
 
 func Set(name string, value string) {
-	if _, ok := sessionStorage.Sessions[currentUuid]; !ok {
-		sessionStorage.Sessions[currentUuid] = Session{}
+	if _, ok := sessionStorage.Sessions[sessionStorage.CurrentSessionId]; !ok {
+		sessionStorage.Sessions[sessionStorage.CurrentSessionId] = Session{}
 	}
 
-	sessionStorage.Sessions[currentUuid][name] = value
+	sessionStorage.Sessions[sessionStorage.CurrentSessionId][name] = value
 	fmt.Println("Update session storage", sessionStorage)
 }
 
 func Get(name string) string {
-	return sessionStorage.Sessions[currentUuid][name]
+	return sessionStorage.Sessions[sessionStorage.CurrentSessionId][name]
 }
 
 func GetSession() Session {
-	return sessionStorage.Sessions[currentUuid]
+	return sessionStorage.Sessions[sessionStorage.CurrentSessionId]
 }
