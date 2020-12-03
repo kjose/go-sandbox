@@ -58,3 +58,17 @@ func Get(name string) string {
 func GetSession() Session {
 	return sessionStorage.Sessions[sessionStorage.CurrentSessionId]
 }
+
+func IsConnected() bool {
+	return len(GetSession()) > 0
+}
+
+func Close(w http.ResponseWriter) {
+	delete(sessionStorage.Sessions, sessionStorage.CurrentSessionId)
+	cookie := &http.Cookie{
+		Name:   "sid",
+		Value:  "",
+		MaxAge: -1,
+	}
+	http.SetCookie(w, cookie)
+}

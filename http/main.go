@@ -28,6 +28,7 @@ func main() {
 		"/redirect": redirect,
 		"/expire":   expire,
 		"/signin":   signin,
+		"/signout":  signout,
 	}
 
 	for url, f := range urls {
@@ -179,12 +180,26 @@ func expire(w http.ResponseWriter, r *http.Request) {
 }
 
 func signin(w http.ResponseWriter, r *http.Request) {
+	if session.IsConnected() {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+
 	if r.Method == http.MethodPost {
 		session.Set("firstname", r.FormValue("firstname"))
 		session.Set("lastname", r.FormValue("lastname"))
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
+
+	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
+}
+
+func signout(w http.ResponseWriter, r *http.Request) {
+	if !session.IsConnected() {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	}
+
+	session.Close(w)
 
 	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
 }
