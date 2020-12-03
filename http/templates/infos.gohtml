@@ -1,0 +1,51 @@
+{{template "inc/header"}}
+
+<p>
+    <b>Last visit : {{.LastVisit}}</b>
+    <br>
+    <a href="/expire">Delete cookie</a>
+</p>
+
+<h1>Infos</h1>
+
+<b>Basics</b>
+<p>
+    Method : {{.Method}}
+</p>
+<p>
+    Host : {{.Host}}
+</p>
+<p>
+    Url : {{.Url}}
+</p>
+<p>
+    Content Length : {{.ContentLength}}
+</p>
+
+<b>Headers</b>
+{{range $key, $val := .Header}}
+<li>
+    {{$key}} {{range $val}}{{.}}, {{end}}
+</li>
+{{end}}
+
+<b>Form</b>
+<ul>
+    {{range $key, $val := .Form}}
+    <li>
+        {{$key}} {{range $val}}{{.}}, {{end}}
+    </li>
+    {{end}}
+</ul>
+
+<h2>GET params</h2>
+<a href="/infos?title=test&title=haha&title=tto&coucou=3&tata=6&yiyi=hoho">Go</a>
+
+<h2>POST params</h2>
+<form action="/infos" method="POST">
+    <label for="email">Email</label>
+    <input type="text" name="email" value="kevin.jose@abtasty.com">
+    <input type="submit" value="Go">
+</form>
+
+{{template "inc/footer"}}

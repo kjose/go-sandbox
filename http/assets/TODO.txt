@@ -1,0 +1,16 @@
+Daily : 
+- Formation GO
+- 1:1 guigui 
+- Réponse question Hichem sur api symfony
+- Bug 
+
+Today : 
+- 
+
+Todo : 
+- SQ Lite database for doctrine test
+
+--- 
+
+Quizz : 
+

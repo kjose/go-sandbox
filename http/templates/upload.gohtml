@@ -1,0 +1,17 @@
+{{template "inc/header"}}
+
+<h1>Updoad</h1>
+<form action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="q">
+    <input type="submit">
+</form>
+
+{{if .Link}}
+    <a href="{{.Link}}" target=_blank>Lien vers le document</a>
+{{end}}
+
+<br><br>
+
+<b>Body : {{.Body}}</b>
+
+{{template "inc/footer"}}
