@@ -3,6 +3,7 @@ package session
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -12,9 +13,14 @@ type SessionStorage struct {
 	Sessions         map[string]Session
 }
 
-type Session map[string]string
+type Session struct {
+	ExpireOn time.Time
+	Data     map[string]string
+}
 
 var sessionStorage *SessionStorage
+
+var expireAfterSeconds int = 1800
 
 func init() {
 	sessionStorage = &SessionStorage{
@@ -41,15 +47,21 @@ func Init(w http.ResponseWriter, r *http.Request) {
 	sessionStorage.CurrentSessionId = cval
 	Set("sid", cval)
 	fmt.Println("Init existing session id", cval)
+
+	// Expire
+	if time.Now().After(sessionStorage.Sessions[cval].ExpireOn) {
+		fmt.Println("Session expired")
+		Close(w)
+	}
 }
 
 func Set(name string, value string) {
-	sessionStorage.Sessions[sessionStorage.CurrentSessionId][name] = value
+	sessionStorage.Sessions[sessionStorage.CurrentSessionId].Data[name] = value
 	fmt.Println("Update session storage", sessionStorage)
 }
 
 func Get(name string) string {
-	return sessionStorage.Sessions[sessionStorage.CurrentSessionId][name]
+	return sessionStorage.Sessions[sessionStorage.CurrentSessionId].Data[name]
 }
 
 func GetSession() Session {
@@ -57,7 +69,7 @@ func GetSession() Session {
 }
 
 func HasSession() bool {
-	return len(sessionStorage.Sessions[sessionStorage.CurrentSessionId]) > 0
+	return len(sessionStorage.Sessions[sessionStorage.CurrentSessionId].Data) > 0
 }
 
 func Create(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +82,10 @@ func Create(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, cookie)
 
-	sessionStorage.Sessions[cuid] = Session{}
+	sessionStorage.Sessions[cuid] = Session{
+		time.Now().Add(time.Duration(expireAfterSeconds) * time.Second),
+		map[string]string{},
+	}
 	sessionStorage.CurrentSessionId = cuid
 	Set("sid", cuid)
 	fmt.Println("Create new session id", cuid)
