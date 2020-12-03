@@ -26,20 +26,18 @@ func init() {
 
 func Init(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("sid")
+	sessionStorage.CurrentSessionId = ""
 	if err != nil {
-		cuid := uuid.New().String()
-		cookie = &http.Cookie{
-			Name:  "sid",
-			Value: cuid,
-			// Secure:   false,
-			HttpOnly: true,
-		}
-		http.SetCookie(w, cookie)
-
-		fmt.Println("Init current session id", cuid)
+		return
 	}
 
-	sessionStorage.CurrentSessionId = cookie.Value
+	cval := cookie.Value
+	if _, ok := sessionStorage.Sessions[cval]; !ok {
+		return
+	}
+
+	sessionStorage.CurrentSessionId = cval
+	fmt.Println("Init session id", cookie.Value)
 }
 
 func Set(name string, value string) {
@@ -60,11 +58,28 @@ func GetSession() Session {
 }
 
 func IsConnected() bool {
-	return len(GetSession()) > 0
+	return sessionStorage.CurrentSessionId != ""
+}
+
+func Create(w http.ResponseWriter, r *http.Request) {
+	cuid := uuid.New().String()
+	cookie := &http.Cookie{
+		Name:  "sid",
+		Value: cuid,
+		// Secure:   false,
+		HttpOnly: true,
+	}
+	http.SetCookie(w, cookie)
+
+	sessionStorage.Sessions[cuid] = Session{}
+	sessionStorage.CurrentSessionId = cuid
+	fmt.Println("Create new session id", cuid)
 }
 
 func Close(w http.ResponseWriter) {
+	fmt.Println("Close session id", sessionStorage.CurrentSessionId)
 	delete(sessionStorage.Sessions, sessionStorage.CurrentSessionId)
+	sessionStorage.CurrentSessionId = ""
 	cookie := &http.Cookie{
 		Name:   "sid",
 		Value:  "",

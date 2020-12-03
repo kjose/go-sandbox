@@ -182,26 +182,24 @@ func expire(w http.ResponseWriter, r *http.Request) {
 func signin(w http.ResponseWriter, r *http.Request) {
 	if session.IsConnected() {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 
 	if r.Method == http.MethodPost {
+		session.Create(w, r)
 		session.Set("firstname", r.FormValue("firstname"))
 		session.Set("lastname", r.FormValue("lastname"))
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 
 	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
 }
 
 func signout(w http.ResponseWriter, r *http.Request) {
-	if !session.IsConnected() {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	}
-
 	session.Close(w)
-
-	tpl.ExecuteTemplate(w, "signin.gohtml", nil)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // func catImg(w http.ResponseWriter, r *http.Request) {
