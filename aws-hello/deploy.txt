@@ -1,0 +1,35 @@
+1) Create a EC2 instance on AWS
+    - Choose IMA (ubuntu for ex)
+    - Choose type (free)
+    - Choose storage (up to 30 giga free for SSD)
+    - Choose tags (name)
+    - Configure security group (default)
+    - Launch and create a key pair file (save it in "~/.ssh" folder)
+
+2) Run in projet 
+    GOOS=linux GOARCH=amd64 go build -o mybinary
+    scp -i ~/.ssh/kp-20201204.pem mybinary ubuntu@ec2-35-180-47-155.eu-west-3.compute.amazonaws.com:
+    // connect then to the server to see the file
+    ssh -i ./.ssh/kp-20201204.pem ubuntu@ec2-35-180-47-155.eu-west-3.compute.amazonaws.com
+    sudo chmod 700 mybinary
+
+3 ) Persist the application
+    cd /etc/systemd/system
+    sudo vi go-sandbox.service
+--- 
+[Unit]
+Description=Go server
+
+[Service]
+ExecStart=/home/ubuntu/mybinary
+User=root
+Group=root
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+--- 
+    sudo systemctl enable go-sandbox.service
+    sudo systemctl start go-sandbox.service
+    sudo systemctl status go-sandbox.service
+    

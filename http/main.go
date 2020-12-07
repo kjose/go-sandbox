@@ -42,7 +42,7 @@ func main() {
 
 	fmt.Println("Server started ...")
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":80", nil)
 }
 
 func wrapper(next http.Handler) http.Handler {
