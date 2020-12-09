@@ -13,12 +13,16 @@ import (
 	"sandbox/http/modules/controllers"
 	"sandbox/http/modules/db"
 	"sandbox/http/modules/globals"
+	"sandbox/http/modules/orm"
 	"sandbox/http/modules/session"
 	// vendor (marche si GOPATH configuré, se trouve dans ./vendor/custom2)
 	// depuis le gopath
 )
 
 func main() {
+	// Init DB
+	orm.Init()
+
 	urls := map[string]func(w http.ResponseWriter, r *http.Request){
 		"/":         controllers.Infos,
 		"/cat":      controllers.Cat,
