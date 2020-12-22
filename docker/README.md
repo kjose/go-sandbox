@@ -15,6 +15,9 @@ docker images
 docker build -t docker-whale .
 docker run -d -p 80:80 go-server
 docker ps
-docker stop a33d19d68ced
+docker kill a33d19d68ced
+
+# Remove image
+docker rmi -f go-server
 ```
 
