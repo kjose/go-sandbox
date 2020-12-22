@@ -25,6 +25,7 @@ docker system prune -a // remove all images
 
 # Push on dockerhub / pull
 docker tag go-server kevinjose/go-server:latest
-docker pull kevinjose/go-server
+docker run -d -p 80:80  kevinjose/go-server
+// docker pull kevinjose/go-server
 ```
 
