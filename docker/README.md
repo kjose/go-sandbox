@@ -21,7 +21,8 @@ docker kill a33d19d68ced
 # Remove image
 docker rmi -f go-server
 
-# Push on dockerhub
+# Push on dockerhub / pull
 docker tag go-server kevinjose/go-server:latest
+docker pull kevinjose/go-server
 ```
 
