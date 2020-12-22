@@ -3,6 +3,7 @@
 ```
 # Config
 docker version
+docker login
 docker ps -a
 
 # Run image
@@ -19,5 +20,8 @@ docker kill a33d19d68ced
 
 # Remove image
 docker rmi -f go-server
+
+# Push on dockerhub
+docker tag go-server kevinjose/go-server:latest
 ```
 
